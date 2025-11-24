@@ -33,13 +33,16 @@ namespace Sitiowebb.Data.Migrations
                 table: "VacationRequests",
                 newName: "CreatedUtc");
 
-            migrationBuilder.AlterColumn<int>(
+            migrationBuilder.DropColumn(
+                name: "Status",
+                table: "VacationRequests");
+
+            migrationBuilder.AddColumn<int>(
                 name: "Status",
                 table: "VacationRequests",
                 type: "INTEGER",
                 nullable: false,
-                oldClrType: typeof(string),
-                oldType: "TEXT");
+                defaultValue: 0);
 
             migrationBuilder.AddColumn<string>(
                 name: "DecidedByManagerId",

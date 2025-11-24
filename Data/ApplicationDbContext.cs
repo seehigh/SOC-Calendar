@@ -7,10 +7,12 @@ namespace Sitiowebb.Data
     public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-            : base(options) { }
+            : base(options)
+        {
+        }
 
         public DbSet<VacationRequest> VacationRequests => Set<VacationRequest>();
-        public DbSet<Sitiowebb.Models.Unavailability> Unavailabilities { get; set; }
-        
+
+        public DbSet<Unavailability> Unavailabilities => Set<Unavailability>();
     }
 }

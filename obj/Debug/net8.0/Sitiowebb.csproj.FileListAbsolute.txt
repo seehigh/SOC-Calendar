@@ -141,3 +141,6 @@ C:\Users\Lenovo\Desktop\Prueba\Sitiowebb\obj\Debug\net8.0\refint\Sitiowebb.dll
 C:\Users\Lenovo\Desktop\Prueba\Sitiowebb\obj\Debug\net8.0\Sitiowebb.pdb
 C:\Users\Lenovo\Desktop\Prueba\Sitiowebb\obj\Debug\net8.0\Sitiowebb.genruntimeconfig.cache
 C:\Users\Lenovo\Desktop\Prueba\Sitiowebb\obj\Debug\net8.0\ref\Sitiowebb.dll
+C:\Users\Lenovo\Desktop\Prueba\Sitiowebb\bin\Debug\net8.0\Npgsql.dll
+C:\Users\Lenovo\Desktop\Prueba\Sitiowebb\bin\Debug\net8.0\Npgsql.EntityFrameworkCore.PostgreSQL.dll
+C:\Users\Lenovo\Desktop\Prueba\Sitiowebb\obj\Debug\net8.0\Sitiowebb.sourcelink.json
