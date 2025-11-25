@@ -14,10 +14,14 @@ using Microsoft.AspNetCore.SignalR;
 // -------------------- BUILDER --------------------
 var builder = WebApplication.CreateBuilder(args);
 
-// -------------------- DB (Postgresql) ----------------
+// --- DB (PostgreSQL) ---
+var connectionString =
+    builder.Environment.IsDevelopment()
+        ? builder.Configuration.GetConnectionString("DefaultConnection")   // local
+        : Environment.GetEnvironmentVariable("DATABASE_URL");              // Railway
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+    options.UseNpgsql(connectionString));
 
 
 builder.Configuration
