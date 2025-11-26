@@ -1,86 +1,75 @@
-using System.Net.Mail;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Options;
-using SendGrid;
-using SendGrid.Helpers.Mail;
 
 namespace Sitiowebb.Services
 {
     public class SmtpAppEmailSender : IAppEmailSender
     {
         private readonly EmailSettings _settings;
+        private readonly HttpClient _httpClient;
 
-        public SmtpAppEmailSender(IOptions<EmailSettings> options)
+        public SmtpAppEmailSender(IOptions<EmailSettings> options, HttpClient httpClient)
         {
             _settings = options.Value;
+            _httpClient = httpClient;
         }
 
         public async Task SendAsync(string toEmail, string subject, string htmlMessage)
         {
-            // 1) Si hay ApiKey => usar SendGrid
-            if (!string.IsNullOrWhiteSpace(_settings.ApiKey))
+            // Si falta algo importante, no intentamos enviar
+            if (string.IsNullOrWhiteSpace(_settings.ApiKey) ||
+                string.IsNullOrWhiteSpace(_settings.From) ||
+                string.IsNullOrWhiteSpace(toEmail))
             {
-                var client = new SendGridClient(_settings.ApiKey);
-
-                var from = new EmailAddress(_settings.From, _settings.FromName);
-                var to = new EmailAddress(toEmail);
-
-                // construimos el HTML bonito con tu template
-                var niceHtml = EmailTemplate.Build(
-                    title: subject,
-                    introText: "Hello,",
-                    mainText: htmlMessage,
-                    buttonText: "Open Arkose dashboard",
-                    buttonUrl: "https://sitiowebb-production.up.railway.app/ManagerOnly/Requests",
-                    footerText: "You received this email because your user is registered in the Arkose Labs availability tool."
-                );
-
-                var msg = MailHelper.CreateSingleEmail(
-                    from,
-                    to,
-                    subject,
-                    plainTextContent: null,
-                    htmlContent: niceHtml
-                );
-
-                var response = await client.SendEmailAsync(msg);
-
-                // Si SendGrid devuelve error, lanza excepción para que lo veamos en logs
-                if ((int)response.StatusCode >= 400)
-                {
-                    var body = await response.Body.ReadAsStringAsync();
-                    throw new Exception($"SendGrid error {(int)response.StatusCode}: {body}");
-                }
-
                 return;
             }
 
-            // 2) Si NO hay ApiKey => usar SMTP (modo desarrollo local)
-            var fromAddr = new MailAddress(_settings.From, _settings.FromName);
-            var toAddr   = new MailAddress(toEmail);
-
-            var niceHtmlSmtp = EmailTemplate.Build(
+            // Usamos tu template bonito
+            var niceHtml = EmailTemplate.Build(
                 title: subject,
                 introText: "Hello,",
                 mainText: htmlMessage,
                 buttonText: "Open Arkose dashboard",
-                buttonUrl: "https://localhost:5232/ManagerOnly/Requests",
+                buttonUrl: "https://sitiowebb-production.up.railway.app/ManagerOnly/Requests",
                 footerText: "You received this email because your user is registered in the Arkose Labs availability tool."
             );
 
-            using var msg2 = new MailMessage(fromAddr, toAddr)
+            var body = new
             {
-                Subject = subject,
-                Body = niceHtmlSmtp,
-                IsBodyHtml = true
+                from = new { email = _settings.From, name = _settings.FromName },
+                to = new[] { new { email = toEmail } },
+                subject = subject,
+                html = niceHtml
             };
 
-            using var clientSmtp = new SmtpClient(_settings.Host, _settings.Port)
-            {
-                EnableSsl = _settings.EnableSsl,
-                Credentials = new System.Net.NetworkCredential(_settings.UserName, _settings.Password)
-            };
+            var json = JsonSerializer.Serialize(body);
 
-            await clientSmtp.SendMailAsync(msg2);
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                "https://api.mailersend.com/v1/email"
+            );
+
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
+
+            request.Content = new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json"
+            );
+
+            try
+            {
+                var response = await _httpClient.SendAsync(request);
+                // Si quieres, puedes revisar response.IsSuccessStatusCode
+            }
+            catch
+            {
+                // Importantísimo: si el correo falla, NO tiramos la web
+            }
         }
     }
 }

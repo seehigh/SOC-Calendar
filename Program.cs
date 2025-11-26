@@ -84,13 +84,13 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizePage("/ManagerOnly/Index");
 });
 
-// ---------------- Email (SMTP) ----------------
+// -------- Email (API MailerSend) --------------
 builder.Services.Configure<EmailSettings>(options =>
 {
-    // Lee los valores de la sección EmailSettings del appsettings
+    // Lee la sección "EmailSettings" de appsettings.*
     builder.Configuration.GetSection("EmailSettings").Bind(options);
 
-    // 🔹 Sobrescribir ApiKey con la variable de entorno de Railway
+    // Sobrescribe ApiKey con la variable de entorno de Railway
     var apiKey = Environment.GetEnvironmentVariable("EMAILSETTINGS__APIKEY");
     if (!string.IsNullOrWhiteSpace(apiKey))
     {
@@ -98,7 +98,8 @@ builder.Services.Configure<EmailSettings>(options =>
     }
 });
 
-// Email sender (SMTP)
+// Registramos el sender que usa HttpClient
+builder.Services.AddHttpClient<SmtpAppEmailSender>();
 builder.Services.AddTransient<IAppEmailSender, SmtpAppEmailSender>();
 
 // ---------------- Autorización por rol ----------------
