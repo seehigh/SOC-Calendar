@@ -12,6 +12,7 @@ using Sitiowebb.Data.Hubs;
 using Microsoft.AspNetCore.SignalR;
  
 // -------------------- BUILDER --------------------
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
 // --- DB (PostgreSQL) ---
