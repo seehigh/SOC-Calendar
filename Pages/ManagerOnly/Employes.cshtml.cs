@@ -102,9 +102,10 @@ namespace Sitiowebb.Pages.ManagerOnly
                 .OrderBy(u => u.Name)
                 .ToListAsync();
 
-            // 2) Unavailabilities ACTIVAS HOY (usamos rango [today, tomorrow))
-            var unavs = await _db.Unavailabilities.AsNoTracking()
-                .Where(u => u.StartDate < tomorrow && u.EndDate >= today)
+            // 2) Unavailabilities ACTIVAS HOY (ni pasadas, ni solo futuras)
+            //  Primero traemos TODO de la BD y después filtramos en memoria.
+            //  Así evitamos que Postgres compare tipos raros (text vs timestamp).
+            var unavsAll = await _db.Unavailabilities.AsNoTracking()
                 .Select(u => new
                 {
                     EmailNorm   = (u.UserEmail ?? "").Trim().ToLowerInvariant(),
@@ -115,6 +116,10 @@ namespace Sitiowebb.Pages.ManagerOnly
                     u.HalfSegment
                 })
                 .ToListAsync();
+
+            var unavs = unavsAll
+                .Where(u => u.StartDate.Date <= today && u.EndDate.Date >= today)
+                .ToList();
 
             var unavMap = unavs
                 .Where(u => !string.IsNullOrWhiteSpace(u.EmailNorm))

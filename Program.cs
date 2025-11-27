@@ -84,33 +84,49 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizePage("/ManagerOnly/Index");
 });
 
-// -------- Email (API MailerSend) --------------
+// -------- Email (SMTP / MailerSend) -------------
 builder.Services.Configure<EmailSettings>(options =>
 {
+    // 1) Carga base desde appsettings.*.json
     builder.Configuration.GetSection("EmailSettings").Bind(options);
 
-    // Overrides desde Railway
-    string? s(string key) => Environment.GetEnvironmentVariable(key);
+    // 2) Sobrescribe con variables de entorno de Railway (si existen)
+    void Override(string envName, Action<string> assign)
+    {
+        var value = Environment.GetEnvironmentVariable(envName);
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            assign(value);
+        }
+    }
 
-    if (!string.IsNullOrWhiteSpace(s("EMAILSETTINGS__HOST")))
-        options.Host = s("EMAILSETTINGS__HOST")!;
-    if (int.TryParse(s("EMAILSETTINGS__PORT"), out var port))
+    Override("EMAILSETTINGS__FROM",      v => options.From = v);
+    Override("EMAILSETTINGS__FROMNAME",  v => options.FromName = v);
+    Override("EMAILSETTINGS__HOST",      v => options.Host = v);
+    Override("EMAILSETTINGS__USERNAME",  v => options.UserName = v);
+    Override("EMAILSETTINGS__PASSWORD",  v => options.Password = v);
+
+    var portStr = Environment.GetEnvironmentVariable("EMAILSETTINGS__PORT");
+    if (int.TryParse(portStr, out var port))
+    {
         options.Port = port;
-    if (bool.TryParse(s("EMAILSETTINGS__ENABLESSL"), out var ssl))
+    }
+
+    var sslStr = Environment.GetEnvironmentVariable("EMAILSETTINGS__ENABLESSL");
+    if (bool.TryParse(sslStr, out var ssl))
+    {
         options.EnableSsl = ssl;
+    }
 
-    if (!string.IsNullOrWhiteSpace(s("EMAILSETTINGS__USERNAME")))
-        options.UserName = s("EMAILSETTINGS__USERNAME")!;
-    if (!string.IsNullOrWhiteSpace(s("EMAILSETTINGS__PASSWORD")))
-        options.Password = s("EMAILSETTINGS__PASSWORD")!;
-
-    if (!string.IsNullOrWhiteSpace(s("EMAILSETTINGS__FROM")))
-        options.From = s("EMAILSETTINGS__FROM")!;
-    if (!string.IsNullOrWhiteSpace(s("EMAILSETTINGS__FROMNAME")))
-        options.FromName = s("EMAILSETTINGS__FROMNAME")!;
+    // Si algún día volvemos a usar ApiKey (por API)
+    var apiKey = Environment.GetEnvironmentVariable("EMAILSETTINGS__APIKEY");
+    if (!string.IsNullOrWhiteSpace(apiKey))
+    {
+        options.ApiKey = apiKey;
+    }
 });
 
-// Registramos el sender que usa HttpClient
+// Registramos el sender que usa SmtpClient
 builder.Services.AddTransient<IAppEmailSender, SmtpAppEmailSender>();
 
 // ---------------- Autorización por rol ----------------

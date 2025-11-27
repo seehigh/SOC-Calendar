@@ -15,36 +15,40 @@ namespace Sitiowebb.Services
 
         public async Task SendAsync(string toEmail, string subject, string htmlMessage)
         {
-            // Si hay algo crítico que falta, no intentamos enviar
+            // Si falta algo crítico, salimos sin hacer nada
             if (string.IsNullOrWhiteSpace(_settings.Host) ||
-                string.IsNullOrWhiteSpace(_settings.UserName) ||
-                string.IsNullOrWhiteSpace(_settings.Password) ||
+                _settings.Port <= 0 ||
                 string.IsNullOrWhiteSpace(_settings.From) ||
                 string.IsNullOrWhiteSpace(toEmail))
             {
-                return; // No rompemos la web
+                return;
             }
+
+            // Envolvemos con tu template bonito
+            var niceHtml = EmailTemplate.Build(
+                title: subject,
+                introText: "Hello,",
+                mainText: htmlMessage,
+                buttonText: "Open Arkose dashboard",
+                buttonUrl: "https://sitiowebb-production.up.railway.app/ManagerOnly/Requests",
+                footerText: "You received this email because your user is registered in the Arkose Labs availability tool."
+            );
+
+            using var msg = new MailMessage(_settings.From, toEmail)
+            {
+                Subject = subject,
+                Body = niceHtml,
+                IsBodyHtml = true
+            };
 
             using var client = new SmtpClient(_settings.Host, _settings.Port)
             {
                 EnableSsl = _settings.EnableSsl,
+                Credentials = new NetworkCredential(
+                    _settings.UserName,
+                    _settings.Password
+                )
             };
-
-            // Evitamos el lío del SecureString usando las propiedades
-            var creds = new NetworkCredential();
-            creds.UserName = _settings.UserName;
-            creds.Password = _settings.Password;
-            client.Credentials = creds;
-
-            var msg = new MailMessage
-            {
-                From = new MailAddress(_settings.From, _settings.FromName),
-                Subject = subject,
-                Body = htmlMessage,
-                IsBodyHtml = true
-            };
-
-            msg.To.Add(toEmail);
 
             try
             {
@@ -52,8 +56,9 @@ namespace Sitiowebb.Services
             }
             catch
             {
-                // Aquí podrías hacer logging, pero NO relanzamos la excepción.
-                // Así, si falla el correo, la web sigue funcionando.
+                // MUY IMPORTANTE: no re-lanzamos la excepción.
+                // Si el correo falla, la web sigue respondiendo igual.
+                // Aquí podrías loguear si algún día añades logs.
             }
         }
     }

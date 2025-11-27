@@ -156,19 +156,25 @@ private IEnumerable<string> ResolveHolidayCountries()
             // ---- FERIADOS PÚBLICOS SEGÚN PAÍS/REGIÓN SELECCIONADA ----
             AddPublicHolidays(firstLocal, lastLocal);
 
-            // ---------- Otras indisponibilidades ----------
-            var unavsQ = _db.Unavailabilities.AsNoTracking()
-                .Where(u => u.StartDate <= last && u.EndDate >= first);
+            // ---------- Otras indisponibilidades ---------- (sick/meeting/trip/halfday/training…)
+            // 1) Traemos TODO lo necesario desde la BD
+            var unavsAll = await _db.Unavailabilities.AsNoTracking()
+                .Select(u => new { u.UserEmail, u.Kind, u.StartDate, u.EndDate })
+                .ToListAsync();
 
+            // 2) Filtramos en memoria por rango de fechas
+            var unavsFiltered = unavsAll
+                .Where(u => u.StartDate.Date <= last.Date && u.EndDate.Date >= first.Date);
+
+            // 3) Filtro por texto (si hay search box)
             if (!string.IsNullOrWhiteSpace(q))
             {
                 var needle = q.Trim().ToUpperInvariant();
-                unavsQ = unavsQ.Where(u => (u.UserEmail ?? "").ToUpper().Contains(needle));
+                unavsFiltered = unavsFiltered
+                    .Where(u => (u.UserEmail ?? "").ToUpper().Contains(needle));
             }
 
-            var unavs = await unavsQ
-                .Select(u => new { u.UserEmail, u.Kind, u.StartDate, u.EndDate })
-                .ToListAsync();
+            var unavs = unavsFiltered.ToList();
 
             foreach (var u in unavs)
             {
@@ -210,22 +216,39 @@ private IEnumerable<string> ResolveHolidayCountries()
                 .OrderBy(u => u.UserName)
                 .ToListAsync();
 
-            var vacToday = await _db.VacationRequests.AsNoTracking()
-                .Where(v => v.Status == RequestStatus.Approved &&
-                            v.From < tomorrow && v.To >= today)
+            var vacAll = await _db.VacationRequests.AsNoTracking()
+                .Where(v => v.Status == RequestStatus.Approved)
                 .Select(v => new { v.UserEmail, v.From, v.To })
                 .ToListAsync();
+
+            var vacToday = vacAll
+                .Where(v => v.From.Date <= today && v.To.Date >= today)
+                .ToList();
 
             var vacMap = vacToday.GroupBy(v => v.UserEmail ?? "")
                                 .ToDictionary(g => g.Key, g => g.First());
 
-            var unavToday = await _db.Unavailabilities.AsNoTracking()
-                .Where(u => u.StartDate < tomorrow && u.EndDate >= today)
-                .Select(u => new { u.UserEmail, u.Kind, u.IsHalfDay, u.HalfSegment, u.StartDate, u.EndDate })
+            // ---------- Indisponibilidades (unavailabilities) de HOY ----------
+            var unavAllToday = await _db.Unavailabilities.AsNoTracking()
+                .Select(u => new
+                {
+                    u.UserEmail,
+                    u.Kind,
+                    u.IsHalfDay,
+                    u.HalfSegment,
+                    u.StartDate,
+                    u.EndDate
+                })
                 .ToListAsync();
 
-            var unavMap = unavToday.GroupBy(u => u.UserEmail ?? "")
-                                .ToDictionary(g => g.Key, g => g.ToList());
+            var unavToday = unavAllToday
+                .Where(u => u.StartDate.Date <= today && u.EndDate.Date >= today)
+                .ToList();
+
+            var unavMap = unavToday
+                .GroupBy(u => u.UserEmail ?? "")
+                .ToDictionary(g => g.Key, g => g.ToList());
+
 
             foreach (var u in users)
             {
