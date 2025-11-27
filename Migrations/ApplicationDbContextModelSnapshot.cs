@@ -2,21 +2,18 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Sitiowebb.Data;
 
 #nullable disable
 
-namespace Sitiowebb.Data.Migrations
+namespace Sitiowebb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251125213156_ChangeVacationRequestDatesToDateTimeOffset")]
-    partial class ChangeVacationRequestDatesToDateTimeOffset
+    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -245,17 +242,17 @@ namespace Sitiowebb.Data.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedUtc")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("HalfSegment")
                         .HasMaxLength(2)
                         .HasColumnType("character varying(2)");
 
-                    b.Property<bool>("IsHalfDay")
-                        .HasColumnType("boolean");
+                    b.Property<int>("IsHalfDay")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Justification")
                         .HasMaxLength(500)
@@ -266,7 +263,7 @@ namespace Sitiowebb.Data.Migrations
                         .HasColumnType("character varying(32)");
 
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("UserEmail")
                         .HasMaxLength(256)
