@@ -1,61 +1,66 @@
-using Microsoft.Extensions.Options;
+using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 
 namespace Sitiowebb.Services
 {
-    public class MailerSendEmailSender : IAppEmailSender
+    public class MailerEmailSender : IAppEmailSender
     {
+        private readonly HttpClient _httpClient;
         private readonly EmailSettings _settings;
-        private readonly HttpClient _http;
 
-        public MailerSendEmailSender(IOptions<EmailSettings> options, HttpClient http)
+        public MailerEmailSender(HttpClient httpClient, IOptions<EmailSettings> options)
         {
+            _httpClient = httpClient;
             _settings = options.Value;
-            _http = http;
         }
 
         public async Task SendAsync(string toEmail, string subject, string htmlMessage)
         {
+            // Si falta algo crítico, no intentamos enviar
             if (string.IsNullOrWhiteSpace(_settings.ApiKey) ||
-                string.IsNullOrWhiteSpace(_settings.From))
+                string.IsNullOrWhiteSpace(_settings.From) ||
+                string.IsNullOrWhiteSpace(toEmail))
+            {
+                Console.WriteLine("[MailerEmailSender] Falta ApiKey, From o toEmail. No se envía correo.");
                 return;
+            }
 
-            var url = "https://api.mailersend.com/v1/email";
-
-            // plantilla bonita
-            var niceHtml = EmailTemplate.Build(
-                title: subject,
-                introText: "Hello,",
-                mainText: htmlMessage,
-                buttonText: "Open Arkose dashboard",
-                buttonUrl: "https://sitiowebb-production.up.railway.app/ManagerOnly/Requests",
-                footerText: "This email was sent automatically by the Arkose availability system."
-            );
+            _httpClient.DefaultRequestHeaders.Clear();
+            _httpClient.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
 
             var payload = new
             {
-                from = new { email = _settings.From, name = _settings.FromName },
-                to = new[] { new { email = toEmail } },
+                from = new
+                {
+                    email = _settings.From,
+                    name = _settings.FromName
+                },
+                to = new[]
+                {
+                    new { email = toEmail }
+                },
                 subject = subject,
-                html = niceHtml
+                html = htmlMessage
             };
 
             var json = JsonSerializer.Serialize(payload);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _http.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _settings.ApiKey);
-
             try
             {
-                var response = await _http.PostAsync(url, content);
-                // si falla no romper la web
+                var response = await _httpClient.PostAsync("https://api.mailersend.com/v1/email", content);
+
+                Console.WriteLine($"[MailerEmailSender] Status: {(int)response.StatusCode} {response.StatusCode}");
+                var respBody = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"[MailerEmailSender] Body: {respBody}");
             }
-            catch
-            { 
-                // no explotar la web por fallos del email
+            catch (Exception ex)
+            {
+                Console.WriteLine("[MailerEmailSender] Error enviando correo: " + ex.Message);
             }
         }
     }

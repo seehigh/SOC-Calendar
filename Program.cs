@@ -84,13 +84,13 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizePage("/ManagerOnly/Index");
 });
 
-// -------- Email (SMTP / MailerSend) -------------
-builder.Services.Configure<Sitiowebb.Services.EmailSettings>(options =>
+// -------- Email (MailerSend API) -------------
+builder.Services.Configure<EmailSettings>(options =>
 {
-    // Lee la sección "EmailSettings" del appsettings.* (por si tienes From, FromName ahí)
+    // Lee "EmailSettings" de appsettings.* (útil en local)
     builder.Configuration.GetSection("EmailSettings").Bind(options);
 
-    // Sobrescribe con variables de entorno de Railway (opcional pero útil en producción)
+    // Sobrescribe con variables de entorno en Railway (producción)
     var from = Environment.GetEnvironmentVariable("EMAILSETTINGS__FROM");
     if (!string.IsNullOrWhiteSpace(from))
         options.From = from;
@@ -104,9 +104,11 @@ builder.Services.Configure<Sitiowebb.Services.EmailSettings>(options =>
         options.ApiKey = apiKey;
 });
 
-// Registramos el sender que usa HttpClient (MailerSend API)
-builder.Services.AddHttpClient<Sitiowebb.Services.SmtpAppEmailSender>();
-builder.Services.AddTransient<Sitiowebb.Services.IAppEmailSender, Sitiowebb.Services.SmtpAppEmailSender>();
+// HttpClient para MailerSend
+builder.Services.AddHttpClient<MailerEmailSender>();
+
+// Usar MailerEmailSender en toda la app donde se pide IAppEmailSender
+builder.Services.AddTransient<IAppEmailSender, MailerEmailSender>();
 
 // ---------------- Autorización por rol ----------------
 builder.Services.AddAuthorization(o =>
