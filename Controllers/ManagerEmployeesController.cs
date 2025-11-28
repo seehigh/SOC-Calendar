@@ -58,7 +58,7 @@ namespace Sitiowebb.Controllers
                 .ToListAsync();
 
             // Prioridad de estado para mostrar si hay varias
-            int Priority(string kind) => (kind?.ToLower()) switch
+            int Priority(string? kind) => (kind?.ToLower()) switch
             {
                 "sick" or "ill"     => 0,
                 "vacation"          => 1,
@@ -69,7 +69,7 @@ namespace Sitiowebb.Controllers
                 _                   => 9
             };
 
-            string Normalize(string k) => (k ?? "").Trim().ToLower() switch
+            string Normalize(string? k) => (k ?? "").Trim().ToLower() switch
             {
                 "ill"      => "sick",
                 "jobtrip"  => "trip",

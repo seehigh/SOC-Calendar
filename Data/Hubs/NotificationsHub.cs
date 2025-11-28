@@ -19,13 +19,16 @@ namespace Sitiowebb.Data.Hubs
         // Cuando alguien se conecta al hub
         public override async Task OnConnectedAsync()
         {
-            var user = await _userManager.GetUserAsync(Context.User);
-            if (user != null)
+            if (Context.User != null)
             {
-                // Si es manager -> lo metemos en el grupo "managers"
-                if (await _userManager.IsInRoleAsync(user, "Manager"))
+                var user = await _userManager.GetUserAsync(Context.User);
+                if (user != null)
                 {
-                    await Groups.AddToGroupAsync(Context.ConnectionId, "managers");
+                    // Si es manager -> lo metemos en el grupo "managers"
+                    if (await _userManager.IsInRoleAsync(user, "Manager"))
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, "managers");
+                    }
                 }
             }
 
@@ -35,10 +38,13 @@ namespace Sitiowebb.Data.Hubs
         // Opcional, por limpieza: sacarlo del grupo al desconectar
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var user = await _userManager.GetUserAsync(Context.User);
-            if (user != null && await _userManager.IsInRoleAsync(user, "Manager"))
+            if (Context.User != null)
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, "managers");
+                var user = await _userManager.GetUserAsync(Context.User);
+                if (user != null && await _userManager.IsInRoleAsync(user, "Manager"))
+                {
+                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, "managers");
+                }
             }
 
             await base.OnDisconnectedAsync(exception);

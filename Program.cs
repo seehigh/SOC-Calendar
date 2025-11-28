@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Sitiowebb.Data;        // ApplicationDbContext
 using Sitiowebb;             // ApplicationUser (si lo tienes en este namespace)
 using Sitiowebb.Data.Hubs;
-using Microsoft.AspNetCore.SignalR;
  
 // -------------------- BUILDER --------------------
 var builder = WebApplication.CreateBuilder(args);

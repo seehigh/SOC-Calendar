@@ -96,7 +96,7 @@
                 {
                     foreach (var ev in day.Events.Take(3))
                     {
-                        <div class="emp-pill @KindClass(ev?.Kind)">
+                        <div class="emp-pill @KindClass(ev.Kind)">
                             <img class="pill-ico" src="@ev.Icon" alt="" />
                             <span>@ev.User</span>
                         </div>
@@ -126,7 +126,7 @@
                         }
                         else
                         {
-                            foreach (var ev in day.Events.OrderBy(e => e.User))
+                            foreach (var ev in (day.Events ?? new()).OrderBy(e => e.User ?? ""))
                             {
                                 <li class="d-flex align-items-center mb-1">
                                     <span class="emp-pill @KindClass(ev.Kind) me-2">
