@@ -198,7 +198,12 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Only redirect HTTPS in development (Railway handles SSL at proxy level)
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseStaticFiles();
 
 app.UseRouting();
