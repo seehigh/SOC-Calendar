@@ -153,6 +153,34 @@ builder.Services.AddScoped<IdentitySeeder>();
 
 // -------------------- APP -------------------------
 var app = builder.Build();
+
+// Add detailed exception middleware for logging
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Unhandled exception in request pipeline");
+        
+        if (!context.Response.HasStarted)
+        {
+            context.Response.StatusCode = 500;
+            if (context.RequestServices.GetRequiredService<IWebHostEnvironment>().IsDevelopment())
+            {
+                await context.Response.WriteAsJsonAsync(new { error = ex.Message, stackTrace = ex.StackTrace });
+            }
+            else
+            {
+                await context.Response.WriteAsJsonAsync(new { error = "An error occurred processing your request" });
+            }
+        }
+    }
+});
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
