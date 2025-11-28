@@ -12,16 +12,30 @@ using Sitiowebb.Data.Hubs;
 using Microsoft.AspNetCore.SignalR;
  
 // -------------------- BUILDER --------------------
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
-// --- DB (SQLite for local development) ---
+// PostgreSQL support for production
+if (!builder.Environment.IsDevelopment())
+{
+    AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+}
+
+// --- DB Configuration ---
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("No se encontró la cadena de conexión");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(connectionString));  // Changed from UseNpgsql to UseSqlite
+{
+    if (builder.Environment.IsDevelopment())
+    {
+        options.UseSqlite(connectionString);  // SQLite for local development
+    }
+    else
+    {
+        options.UseNpgsql(connectionString);  // PostgreSQL for production
+    }
+});
 
 
 builder.Configuration
