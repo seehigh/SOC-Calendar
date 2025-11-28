@@ -15,20 +15,24 @@ using Microsoft.AspNetCore.SignalR;
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 var builder = WebApplication.CreateBuilder(args);
 
-// --- DB (PostgreSQL) ---
+// --- DB (SQLite for local development) ---
 var connectionString =
     builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? throw new InvalidOperationException("No se encontró la cadena de conexión");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseSqlite(connectionString));  // Changed from UseNpgsql to UseSqlite
 
 
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true)
-    .AddEnvironmentVariables();
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true);
+
+// Only load environment variables in production
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddEnvironmentVariables();
+}
 
 // ---------------- Identity + Roles ----------------
 builder.Services
@@ -81,7 +85,7 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizePage("/VacationRequest");
 
     // menú solo para managers (área ManagerOnly)
-    options.Conventions.AuthorizePage("/ManagerOnly/Index");
+    options.Conventions.AuthorizeFolder("/ManagerOnly", "ManagersOnly");
 });
 
 // -------- Email (MailerSend API) -------------
@@ -173,17 +177,24 @@ app.MapGet("/", ctx =>
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    
     try
     {
-        var db     = services.GetRequiredService<ApplicationDbContext>();
+        var db = services.GetRequiredService<ApplicationDbContext>();
+        
+        logger.LogInformation("Attempting to apply migrations...");
         await db.Database.MigrateAsync();
+        logger.LogInformation("✅ Migrations applied successfully");
 
-        var seeder = services.GetRequiredService<IdentitySeeder>(); // si tienes este seeder
-        await seeder.SeedAsync();                                   // crea roles y managers si faltan
+        var seeder = services.GetRequiredService<IdentitySeeder>();
+        await seeder.SeedAsync();
+        logger.LogInformation("✅ Seeding completed successfully");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Seeding error: {ex.Message}");
+        logger.LogError(ex, "❌ Database initialization error - app will continue without migrations");
+        // Don't rethrow - let the app start even if DB connection fails
     }
 }
 
@@ -204,26 +215,6 @@ app.MapGet("/dev/make-manager/{email}", async (
 
     return Results.Ok($"{email} is now Manager.");
 });
-
-// ======= APLICAR MIGRACIONES AUTOMÁTICAMENTE EN PRODUCCIÓN =======
-using (var scope = app.Services.CreateScope())
-{
-    var logger = scope.ServiceProvider
-                      .GetRequiredService<ILogger<Program>>();
-
-    try
-    {
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.Migrate();
-        logger.LogInformation("EF migrations applied on startup.");
-    }
-    catch (Exception ex)
-    {
-        // IMPORTANTE: no tiramos la app, sólo logueamos
-        logger.LogError(ex, "Error applying EF migrations on startup.");
-    }
-}
-// ================================================================
 
 app.Run();
 
