@@ -206,7 +206,26 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("✅ Seeding completed successfully");
 
         // Fix any users with missing CountryCode or TimeZoneId
-        await app.FixUserDataAsync();
+        var users = db.Users.ToList();
+        bool hasChanges = false;
+        foreach (var user in users)
+        {
+            if (string.IsNullOrWhiteSpace(user.CountryCode))
+            {
+                user.CountryCode = "ES";
+                hasChanges = true;
+            }
+            if (string.IsNullOrWhiteSpace(user.TimeZoneId))
+            {
+                user.TimeZoneId = "Europe/Madrid";
+                hasChanges = true;
+            }
+        }
+        if (hasChanges)
+        {
+            await db.SaveChangesAsync();
+            logger.LogInformation("✅ User data fixed successfully");
+        }
     }
     catch (Exception ex)
     {
