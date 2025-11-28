@@ -20,9 +20,22 @@ if (!builder.Environment.IsDevelopment())
 }
 
 // --- DB Configuration ---
-var connectionString =
-    builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("No se encontró la cadena de conexión");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+// For Railway: support DATABASE_URL environment variable
+if (string.IsNullOrEmpty(connectionString))
+{
+    var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+    if (!string.IsNullOrEmpty(databaseUrl))
+    {
+        // Convert DATABASE_URL format to NpgsqlConnection string
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':');
+        connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.LocalPath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};Ssl Mode=Require;Trust Server Certificate=true";
+    }
+}
+
+connectionString = connectionString ?? throw new InvalidOperationException("No connection string found. Set ConnectionStrings:DefaultConnection or DATABASE_URL environment variable.");
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
