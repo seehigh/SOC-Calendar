@@ -64,14 +64,15 @@ namespace Sitiowebb.Pages
             // 2) Usuario actual
             var userEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? "";
 
-            // 3) Crear solicitud
+            // 3) Crear solicitud - convert DateTime to DateTimeOffset
             var req = new VacationRequest
             {
-                From       = fromDate,
-                To         = toDate,
-                CreatedUtc = DateTime.UtcNow,
+                From       = new DateTimeOffset(fromDate, TimeSpan.Zero),
+                To         = new DateTimeOffset(toDate, TimeSpan.Zero),
+                CreatedUtc = DateTimeOffset.UtcNow,
                 Status     = RequestStatus.Pending,
-                UserEmail  = userEmail
+                UserEmail  = userEmail,
+                Kind       = "vacation"
             };
 
             _db.VacationRequests.Add(req);
