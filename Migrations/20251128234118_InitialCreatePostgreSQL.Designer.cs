@@ -11,8 +11,8 @@ using Sitiowebb.Data;
 namespace Sitiowebb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251128230746_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251128234118_InitialCreatePostgreSQL")]
+    partial class InitialCreatePostgreSQL
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
