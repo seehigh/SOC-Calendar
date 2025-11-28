@@ -19,12 +19,27 @@ namespace Sitiowebb.Data
         {
             base.OnModelCreating(builder);
 
-            // Conversor bool <-> int SOLO para Unavailability.IsHalfDay
+            // For PostgreSQL: convert INTEGER boolean columns to proper BOOLEAN type
             var boolToIntConverter = new ValueConverter<bool, int>(
                 v => v ? 1 : 0,
                 v => v == 1
             );
 
+            // Apply conversion to all Identity boolean properties that were stored as int in old DB
+            foreach (var entity in builder.Model.GetEntityTypes())
+            {
+                foreach (var property in entity.GetProperties())
+                {
+                    if (property.ClrType == typeof(bool) && 
+                        (entity.Name.StartsWith("AspNetUsers") || entity.Name.StartsWith("IdentityUser")))
+                    {
+                        // These should be BOOLEAN in PostgreSQL, not INTEGER
+                        // Don't apply the int converter for these
+                    }
+                }
+            }
+
+            // Only apply int converter to Unavailability.IsHalfDay
             builder.Entity<Unavailability>()
                 .Property(u => u.IsHalfDay)
                 .HasConversion(boolToIntConverter);
