@@ -204,6 +204,9 @@ using (var scope = app.Services.CreateScope())
         var seeder = services.GetRequiredService<IdentitySeeder>();
         await seeder.SeedAsync();
         logger.LogInformation("✅ Seeding completed successfully");
+
+        // Fix any users with missing CountryCode or TimeZoneId
+        await app.FixUserDataAsync();
     }
     catch (Exception ex)
     {
