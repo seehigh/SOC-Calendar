@@ -11,7 +11,7 @@ using Sitiowebb.Data;
 namespace Sitiowebb.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251128213604_InitialCreate")]
+    [Migration("20251128230746_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
