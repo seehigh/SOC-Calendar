@@ -63,6 +63,7 @@ namespace Sitiowebb.Pages
 
             // 2) Usuario actual
             var userEmail = User.FindFirstValue(ClaimTypes.Email) ?? User.Identity?.Name ?? "";
+            var currentUser = await _userManager.FindByEmailAsync(userEmail);
 
             // 3) Crear solicitud - convert DateTime to DateTimeOffset
             var req = new VacationRequest
@@ -93,8 +94,24 @@ namespace Sitiowebb.Pages
                 to   = req.To
             });
 
-            // 5) Enviar emails a todos los managers
-            var managers = await _userManager.GetUsersInRoleAsync("Manager");
+            // 5) Enviar email solo al manager asignado del usuario (o a todos si no tiene)
+            var managers = new List<ApplicationUser>();
+            
+            if (currentUser?.ManagerId != null)
+            {
+                // Send to assigned manager
+                var assignedManager = await _userManager.FindByIdAsync(currentUser.ManagerId);
+                if (assignedManager != null)
+                {
+                    managers.Add(assignedManager);
+                }
+            }
+            else
+            {
+                // Fallback: send to all managers if no assigned manager
+                managers = (await _userManager.GetUsersInRoleAsync("Manager")).ToList();
+            }
+            
             foreach (var manager in managers)
             {
                 if (string.IsNullOrWhiteSpace(manager.Email))

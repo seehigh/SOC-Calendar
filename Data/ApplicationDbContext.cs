@@ -43,6 +43,13 @@ namespace Sitiowebb.Data
             builder.Entity<Unavailability>()
                 .Property(u => u.IsHalfDay)
                 .HasConversion(boolToIntConverter);
+
+            // Configure manager-employee relationship
+            builder.Entity<ApplicationUser>()
+                .HasOne(u => u.Manager)
+                .WithMany(u => u.ManagedEmployees)
+                .HasForeignKey(u => u.ManagerId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

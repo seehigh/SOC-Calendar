@@ -12,5 +12,12 @@ namespace Sitiowebb.Models
 
         // IANA time zone id ("Europe/Madrid", "America/New_York", etc)
         public string TimeZoneId { get; set; } = "Europe/Madrid";
+
+        // Manager assignment
+        public string? ManagerId { get; set; }
+        public ApplicationUser? Manager { get; set; }
+        
+        // Employees under this manager
+        public ICollection<ApplicationUser> ManagedEmployees { get; set; } = new List<ApplicationUser>();
     }
 }

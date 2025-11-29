@@ -5,7 +5,11 @@ using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;   // [AllowAnonymous]
+using Sitiowebb.Data;
 using Sitiowebb.Models;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Sitiowebb.Areas.Identity.Pages.Account
 {
@@ -15,15 +19,21 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<RegisterModel> _logger;
+        private readonly ApplicationDbContext _dbContext;
 
         public RegisterModel(UserManager<ApplicationUser> userManager,
                              SignInManager<ApplicationUser> signInManager,
-                             ILogger<RegisterModel> logger)
+                             ILogger<RegisterModel> logger,
+                             ApplicationDbContext dbContext)
         {
             _userManager   = userManager;
             _signInManager = signInManager;
             _logger        = logger;
+            _dbContext     = dbContext;
         }
+
+        // Managers available for selection
+        public List<ApplicationUser> AvailableManagers { get; set; } = new();
 
         [BindProperty]
         public InputModel Input { get; set; } = new();
@@ -55,15 +65,31 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
             [Required]
             [Display(Name = "Time zone (IANA)")]
             public string TimeZoneId { get; set; } = "Etc/UTC"; // valor por defecto
+
+            // ===== NUEVO: Manager Assignment =====
+            [Display(Name = "Manager")]
+            public string? ManagerId { get; set; }
         }
 
-        public void OnGet(string? returnUrl = null)
+        public async Task OnGetAsync(string? returnUrl = null)
         {
             // Puedes dar defaults amigables aquí si quieres
             if (string.IsNullOrWhiteSpace(Input.CountryCode))
                 Input.CountryCode = "US";
             if (string.IsNullOrWhiteSpace(Input.TimeZoneId))
                 Input.TimeZoneId = "Etc/UTC";
+
+            // Load available managers: get all users, then filter those with Manager role
+            var allUsers = _dbContext.Users.OrderBy(u => u.Email).ToList();
+            AvailableManagers = new List<ApplicationUser>();
+            
+            foreach (var user in allUsers)
+            {
+                if (await _userManager.IsInRoleAsync(user, "Manager"))
+                {
+                    AvailableManagers.Add(user);
+                }
+            }
         }
 
         public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
@@ -89,7 +115,8 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
                 Email          = Input.Email,
                 EmailConfirmed = true,
                 CountryCode    = cc,         // <<< guarda país
-                TimeZoneId     = tz          // <<< guarda zona horaria
+                TimeZoneId     = tz,         // <<< guarda zona horaria
+                ManagerId      = Input.ManagerId  // <<< asigna manager
             };
 
             var result = await _userManager.CreateAsync(user, Input.Password);

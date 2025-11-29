@@ -114,7 +114,18 @@
         <span asp-validation-for="Input.TimeZoneId" class="text-danger small"></span>
     </div>
 
-    <button type="submit" class="btn btn-green btn-lg w-100">Sign up</button>
+    <!-- Manager Selection -->
+    <div class="mb-4">
+        <label asp-for="Input.ManagerId" class="form-label"></label>
+        <select asp-for="Input.ManagerId" class="form-select">
+            <option value="">-- Select a manager --</option>
+            @foreach (var manager in Model.AvailableManagers)
+            {
+                <option value="@manager.Id">@manager.Email</option>
+            }
+        </select>
+        <span asp-validation-for="Input.ManagerId" class="text-danger small"></span>
+    </div>
 </form>
 
 @section Scripts {

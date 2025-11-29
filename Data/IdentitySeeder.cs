@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 using Sitiowebb.Models; // ApplicationUser
 
 namespace Sitiowebb.Data
@@ -15,15 +17,18 @@ namespace Sitiowebb.Data
         private readonly RoleManager<IdentityRole> _roles;
         private readonly UserManager<ApplicationUser> _users;
         private readonly IConfiguration _config;
+        private readonly ApplicationDbContext _dbContext;
 
         public IdentitySeeder(
             RoleManager<IdentityRole> roles,
             UserManager<ApplicationUser> users,
-            IConfiguration config)
+            IConfiguration config,
+            ApplicationDbContext dbContext)
         {
             _roles  = roles;
             _users  = users;
             _config = config;
+            _dbContext = dbContext;
         }
 
         public async Task SeedAsync()
@@ -55,7 +60,9 @@ namespace Sitiowebb.Data
                         {
                             UserName       = email,
                             Email          = email,
-                            EmailConfirmed = true
+                            EmailConfirmed = true,
+                            CountryCode    = "ES",  // Default for seeded managers
+                            TimeZoneId     = "Europe/Madrid"  // Default timezone
                         };
 
                         var createRes = await _users.CreateAsync(newUser, pwd);
@@ -69,7 +76,36 @@ namespace Sitiowebb.Data
                 }
             }
 
-            // 3) Promover “a mano” un correo existente (opcional)
+            // 3) Assign managers to employees (non-manager users without a manager)
+            var allUsers = await _dbContext.Users.ToListAsync();
+            var managers = new List<ApplicationUser>();
+            
+            // Filter managers
+            foreach (var user in allUsers)
+            {
+                if (await _users.IsInRoleAsync(user, RoleManager))
+                {
+                    managers.Add(user);
+                }
+            }
+
+            if (managers.Count > 0)
+            {
+                var employeesWithoutManager = allUsers
+                    .Where(u => !managers.Contains(u) && u.ManagerId == null)
+                    .ToList();
+
+                // Round-robin assignment: distribute employees among managers
+                for (int i = 0; i < employeesWithoutManager.Count; i++)
+                {
+                    var managerIndex = i % managers.Count;
+                    employeesWithoutManager[i].ManagerId = managers[managerIndex].Id;
+                }
+
+                await _dbContext.SaveChangesAsync();
+            }
+
+            // 4) Promover "a mano" un correo existente (opcional)
             var emailManual = _config["Seed:PromoteEmail"]; // p.ej. "sararomerosuarez@gmail.com"
             if (!string.IsNullOrWhiteSpace(emailManual))
             {
