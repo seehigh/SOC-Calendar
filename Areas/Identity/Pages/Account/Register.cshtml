@@ -87,33 +87,6 @@
         <span asp-validation-for="Input.CountryCode" class="text-danger small"></span>
     </div>
 
-    <!-- Time Zone (IANA) -->
-    <div class="mb-3">
-        <label asp-for="Input.TimeZoneId" class="form-label"></label>
-        <input asp-for="Input.TimeZoneId" class="form-control"
-               list="tz-common"
-               placeholder="America/New_York, Europe/Madrid, America/Costa_Rica, Australia/Sydney"
-               required />
-        <datalist id="tz-common">
-            <option value="Etc/UTC" />
-            <option value="America/New_York" />
-            <option value="America/Chicago" />
-            <option value="America/Denver" />
-            <option value="America/Los_Angeles" />
-            <option value="Europe/Madrid" />
-            <option value="Europe/London" />
-            <option value="America/Mexico_City" />
-            <option value="America/Costa_Rica" />
-            <option value="America/Bogota" />
-            <option value="America/Lima" />
-            <option value="America/Sao_Paulo" />
-            <option value="America/Argentina/Buenos_Aires" />
-            <option value="Australia/Sydney" />
-            <option value="Pacific/Auckland" />
-        </datalist>
-        <span asp-validation-for="Input.TimeZoneId" class="text-danger small"></span>
-    </div>
-
     <!-- Manager Selection -->
     <div class="mb-4">
         <label asp-for="Input.ManagerId" class="form-label"></label>
@@ -126,6 +99,8 @@
         </select>
         <span asp-validation-for="Input.ManagerId" class="text-danger small"></span>
     </div>
+
+    <button type="submit" class="btn btn-green btn-lg w-100">Sign up</button>
 </form>
 
 @section Scripts {

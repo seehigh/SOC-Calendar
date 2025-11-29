@@ -56,15 +56,11 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
             [Compare("Password", ErrorMessage = "Las contraseñas no coinciden.")]
             public string ConfirmPassword { get; set; } = string.Empty;
 
-            // ===== NUEVO: País y Zona horaria =====
+            // ===== NUEVO: País =====
             [Required]
             [Display(Name = "Country (ISO-2)")]
             [RegularExpression(@"^[A-Za-z]{2}$", ErrorMessage = "Usa un código ISO-2 válido (p. ej., US, ES, MX, CR, AR, BR, AU).")]
             public string CountryCode { get; set; } = "US";   // valor por defecto
-
-            [Required]
-            [Display(Name = "Time zone (IANA)")]
-            public string TimeZoneId { get; set; } = "Etc/UTC"; // valor por defecto
 
             // ===== NUEVO: Manager Assignment =====
             [Display(Name = "Manager")]
@@ -73,13 +69,11 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
 
         public async Task OnGetAsync(string? returnUrl = null)
         {
-            // Puedes dar defaults amigables aquí si quieres
+            // Set default country
             if (string.IsNullOrWhiteSpace(Input.CountryCode))
                 Input.CountryCode = "US";
-            if (string.IsNullOrWhiteSpace(Input.TimeZoneId))
-                Input.TimeZoneId = "Etc/UTC";
 
-            // Load available managers: get all users, then filter those with Manager role
+            // Load available managers (users with "Manager" role)
             var allUsers = _dbContext.Users.OrderBy(u => u.Email).ToList();
             AvailableManagers = new List<ApplicationUser>();
             
@@ -97,14 +91,11 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
             if (!ModelState.IsValid)
                 return Page();
 
-            // Normaliza país (ISO-2) y TZ
+            // Normalize country code
             var cc = (Input.CountryCode ?? "").Trim().ToUpperInvariant();
-            var tz = (Input.TimeZoneId  ?? "").Trim();
 
             if (cc.Length != 2)
                 ModelState.AddModelError(nameof(Input.CountryCode), "Código de país inválido.");
-            if (string.IsNullOrWhiteSpace(tz))
-                ModelState.AddModelError(nameof(Input.TimeZoneId), "Zona horaria requerida.");
 
             if (!ModelState.IsValid)
                 return Page();
@@ -114,9 +105,9 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
                 UserName       = Input.UserName,
                 Email          = Input.Email,
                 EmailConfirmed = true,
-                CountryCode    = cc,         // <<< guarda país
-                TimeZoneId     = tz,         // <<< guarda zona horaria
-                ManagerId      = Input.ManagerId  // <<< asigna manager
+                CountryCode    = cc,         // <<< save country
+                TimeZoneId     = "Etc/UTC",  // <<< default timezone
+                ManagerId      = Input.ManagerId  // <<< assign manager
             };
 
             var result = await _userManager.CreateAsync(user, Input.Password);
@@ -130,10 +121,8 @@ namespace Sitiowebb.Areas.Identity.Pages.Account
             _logger.LogInformation("Usuario creado exitosamente.");
             await _signInManager.SignInAsync(user, isPersistent: false);
 
-            // Redirige SIEMPRE al home de usuario
+            // Redirect to user home
             return LocalRedirect(Url.Content("~/UsuarioHome"));
-            // Si prefieres respetar ReturnUrl cuando sea local:
-            // return LocalRedirect(Url.IsLocalUrl(returnUrl) ? returnUrl! : Url.Content("~/UsuarioHome"));
         }
     }
 }
